@@ -30,7 +30,7 @@ TEST(DSVReaderTest, QuotedFields) {
 
     std::vector<std::string> row;
     ASSERT_TRUE(reader.ReadRow(row));
-    EXPECT_EQ(row, (std::vector<std::string>{"\"Name\"", "\"Age\"", "\"Location\""}));
+    EXPECT_EQ(row, (std::vector<std::string>{"Name", "Age", "Location"}));
 
     ASSERT_TRUE(reader.ReadRow(row));
     EXPECT_EQ(row, (std::vector<std::string>{"Jane", "25", "New, Jersey"}));
