@@ -1,9 +1,9 @@
 # Compiler&flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
+CXXFLAGS = -std=c++17 -Wall -Wextra -I./include 
 
 # Linker flags (add -lexpat to the linker flags)
-LDFLAGS = -lexpat
+LDFLAGS = -lexpat -lgtest -lgtest_main 
 
 # Directories for object files and binaries
 OBJDIR = obj
@@ -40,19 +40,19 @@ $(OBJDIR)/%.o: $(TESTDIR)/%.cpp | $(OBJDIR)
 
 # link executables
 $(BINDIR)/teststrutils: $(OBJDIR)/StringUtils.o $(OBJDIR)/StringUtilsTest.o | $(BINDIR)
-	$(CXX) $^ -lgtest -lgtest_main -o $@
+	$(CXX) $^ $(LDFLAGS) -o $@
 
 $(BINDIR)/teststrdatasource: $(OBJDIR)/StringDataSource.o $(OBJDIR)/StringDataSourceTest.o | $(BINDIR)
-	$(CXX) $^ -lgtest -lgtest_main -o $@
+	$(CXX) $^ $(LDFLAGS) -o $@
 
 $(BINDIR)/teststrdatasink: $(OBJDIR)/StringDataSink.o $(OBJDIR)/StringDataSinkTest.o | $(BINDIR)
-	$(CXX) $^ -lgtest -lgtest_main -o $@
+	$(CXX) $^ $(LDFLAGS) -o $@
 
 $(BINDIR)/testdsv: $(OBJDIR)/DSVReader.o $(OBJDIR)/DSVWriter.o $(OBJDIR)/DSVTest.o $(OBJDIR)/StringDataSource.o $(OBJDIR)/StringDataSink.o | $(BINDIR)
-	$(CXX) $^ -lgtest -lgtest_main -o $@
+	$(CXX) $^ $(LDFLAGS) -o $@
 
-$(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o $(OBJDIR)/StringDataSource.o | $(BINDIR)
-	$(CXX) $^ -lgtest -lgtest_main -lexpat -o $@
+$(BINDIR)/testxml: $(OBJDIR)/XMLReader.o $(OBJDIR)/XMLWriter.o $(OBJDIR)/XMLTest.o $(OBJDIR)/StringDataSource.o  $(OBJDIR)/StringDataSink.o| $(BINDIR)
+	$(CXX) $^ $(LDFLAGS) -o $@
 
 # run
 test: $(TARGETS)

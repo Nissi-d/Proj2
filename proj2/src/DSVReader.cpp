@@ -58,11 +58,12 @@ bool CDSVReader::ReadRow(std::vector<std::string>& row) {
             } else {
                 inQuotes = true; // going into quotes
             }
-        } else {
-            value += ch;    // add current char to value 
+        }
+        else{
+            value += ch;
         }
     }
-    if (!value.empty()) {
+    if (!value.empty()|| (ch == implementation->delimiter && !inQuotes)) {
         row.push_back(value); // add last value wihout newline to the row
     }
 
