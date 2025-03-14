@@ -6,69 +6,77 @@ struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> source;    
     XML_Parser parser;
     SXMLEntity curr;
-    bool end; 
-    SImplementation(std::shared_ptr<CDataSource> src):source(src), end(false){
-        parser = XML_ParserCreate(nullptr); // expat parser
+    bool parseEnd;  // at end of parsing
+
+    // Constructor: Initialize the parser and set up callbacks
+    SImplementation(std::shared_ptr<CDataSource> src): source(src), parseEnd(false) {
+        parser = XML_ParserCreate(nullptr);  // create expat parser
         XML_SetUserData(parser, this);  // set user data for callbacks
-        XML_SetElementHandler(parser, StartEHand, EndEHand );
-        XML_SetCharacterDataHandler(parser, CharDataHand);  //cha
-           
-        }
+        XML_SetElementHandler(parser, StartEHand, EndEHand);    // set start and end handlers
+        XML_SetCharacterDataHandler(parser, CharDataHand);  // set char data handler
+    }
+
+    // Destructor: Free the parser when done
     ~SImplementation() {
         XML_ParserFree(parser);
     }
-    static void XMLCALL StartEHand(void *userData, const XML_Char *name, const XML_Char **atts){    //handler for start elements
-        auto implementation = static_cast<SImplementation *>(userData); 
-        implementation->curr.DType = SXMLEntity::EType::StartElement;   
-        implementation->curr.DNameData = name;
-        implementation->curr.DAttributes.clear();
-        for (int i = 0; atts[i]; i += 2) {  // parse atts
-            implementation->curr.DAttributes.emplace_back(atts[i], atts[i + 1]);
-        }
+    // start element callback
+    static void StartEHand(void *userData, const char *name, const char **attrs) {
+        SImplementation *implementation = static_cast<SImplementation*>(userData);
+        implementation->curr.DType = SXMLEntity::EType::StartElement;   // set entity type to StartElement
+        implementation->curr.DNameData = name; 
+        
+        implementation->curr.DAttributes.clear();  // clear attributes
 
+        while(*attrs){
+            implementation->curr.DAttributes.push_back(
+                std::make_pair(std::string(attrs[0]), std::string(attrs[1]))
+            );
+            attrs +=2;  //jump to next attribute or key:value pair
+        }
     }
-    static void XMLCALL EndEHand(void *userData, const XML_Char *name) {  // end elements
-        auto implementation = static_cast<SImplementation *>(userData); 
-        implementation->curr.DType = SXMLEntity::EType::EndElement;   
+    // end element callback
+    static void EndEHand(void *userData, const char *name){
+        SImplementation *implementation = static_cast<SImplementation*>(userData);
+        implementation->curr.DType = SXMLEntity::EType::EndElement;
         implementation->curr.DNameData = name;
     }
-    static void XMLCALL CharDataHand(void *userData, const XML_Char *s, int len){    //handler for start elements
-        auto implementation = static_cast<SImplementation *>(userData); 
-        implementation->curr.DType = SXMLEntity::EType::CharData;   
-        implementation->curr.DNameData.assign(s, len);
-    }
-    bool ReadEntity(SXMLEntity &entity, bool skipcdata){
-        char ch;
-        while (source->Get(ch)) {
-            if (!XML_Parse(parser, &ch, 1, false)) {
-                return false;   //
-            }
-            if (curr.DType != SXMLEntity::EType::CharData || !skipcdata){
-                entity = curr;
-                return true;
-            }
-        }
-        XML_Parse(parser, nullptr, 0, true);
-        end = true;
-        return false;
-    }
-    bool End() const{
-        return end;     // whether or not end of data was reached
+    // char data calback
+    static void CharDataHand(void *userData, const char *data, int len) {                
+        SImplementation *implementation = static_cast<SImplementation*>(userData);
+        implementation->curr.DType = SXMLEntity::EType::CharData;
+        implementation->curr.DNameData.assign(data, len);
     }
 };
 
-CXMLReader::CXMLReader(std::shared_ptr< CDataSource > src) : implementation(std::make_unique<SImplementation>(src)) {
-    // You can initialize your internal state here if needed, using 'src'
-}
+// Constructor for CXMLReader class
+CXMLReader::CXMLReader(std::shared_ptr<CDataSource> src) 
+: implementation(std::make_unique<SImplementation>(src)) {}
 
+// Destructor
 CXMLReader::~CXMLReader() = default;
 
+// End of parsing check
 bool CXMLReader::End() const {
-    // Implement the logic to determine if the XML reading has finished
-    return implementation->End();
+    return implementation->parseEnd;
 }
 
+// Read entities
 bool CXMLReader::ReadEntity(SXMLEntity &entity, bool skipcdata) {
-    // Implement logic for reading an entity and potentially skipping cdata if needed
-    return implementation->ReadEntity(entity, skipcdata);
+    char ch;
+    while (implementation->source->Get(ch)) {
+        if (!XML_Parse(implementation->parser, &ch, 1, false)) {
+            return false;
+        }
+        // if entity not char data or not skipcdata
+        if (implementation->curr.DType != SXMLEntity::EType::CharData || !skipcdata) {
+            entity = implementation->curr;      // copy
+            implementation->curr = SXMLEntity();  // Reset the current entity
+            return true;
+        }
+    }
+    // finalize parsing at source end
+    XML_Parse(implementation->parser, nullptr, 0, true);  
+    implementation->parseEnd = true;    // parsing finished
+    return false;
 }
