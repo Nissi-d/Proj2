@@ -1,4 +1,6 @@
 #include "XMLReader.h"
+#include "DataSource.h"
+#include "DataSink.h"
 #include <expat.h>
 #include <iostream>
 

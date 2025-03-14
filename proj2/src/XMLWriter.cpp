@@ -1,5 +1,8 @@
 #include "XMLWriter.h"
+#include "DataSource.h"
+#include "DataSink.h"
 #include <iostream>
+
 
 struct CXMLWriter::SImplementation {
     std::shared_ptr<CDataSink> DataSink;
