@@ -26,11 +26,14 @@ struct CXMLReader::SImplementation {
         entity.DType = SXMLEntity::EType::StartElement; // set entity type to start element
         entity.DNameData = name;    
 
+        int attributeCount = 0; //tracker
         while(*attrs){  //add atributes to entity
             std::string attrName = *attrs++;    
             std::string attrValue = *attrs++;
             entity.SetAttribute(attrName, attrValue);   
         }
+        std::cout << "StartElement: " << name << "\nNo of Attributes: " << attributeCount << std::endl;
+
         implementation->entityCallback(entity);
     }
     // end element callback
