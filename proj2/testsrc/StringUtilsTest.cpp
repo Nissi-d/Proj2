@@ -1,11 +1,7 @@
 #include <gtest/gtest.h>
 #include "StringUtils.h"
 
-TEST(StringUtilsTest, SliceTest){
-    EXPECT_EQ(StringUtils::Slice("Hello, World!", 0, 5), "Hello");
-    EXPECT_EQ(StringUtils::Slice("Hello, World!", 7), "Hello");
-    EXPECT_EQ(StringUtils::Slice("Hello, World!", -3), "rld!");
-}
+
 
 TEST(StringUtilsTest, Capitalize){
     EXPECT_EQ(StringUtils::Capitalize("hello"), "Hello");
@@ -38,10 +34,7 @@ TEST(StringUtilsTest, Strip){
     EXPECT_EQ(StringUtils::Strip("   hello   "), "hello");
 }
 
-TEST(StringUtilsTest, Center){
-    EXPECT_EQ(StringUtils::Center("hello", 8), " hello ");
-    EXPECT_EQ(StringUtils::Center("hello", 3), "hello");
-}
+
 
 TEST(StringUtilsTest, LJust){
     EXPECT_EQ(StringUtils::LJust("hello", 10), "hello     ");

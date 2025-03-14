@@ -31,6 +31,7 @@ struct CXMLReader::SImplementation {
             std::string attrValue = *attrs++;
             entity.SetAttribute(attrName, attrValue);   
         }
+        implementation->entityCallback(entity);
     }
     // end element callback
     static void EndEHand(void *userData, const char *name){
@@ -38,6 +39,7 @@ struct CXMLReader::SImplementation {
         SXMLEntity entity;
         entity.DType = SXMLEntity::EType::EndElement;
         entity.DNameData = name;
+        implementation->entityCallback(entity);
     }
     // char data calback
     static void CharDataHand(void *userData, const char *data, int len) {                
@@ -45,8 +47,11 @@ struct CXMLReader::SImplementation {
         SXMLEntity entity;
         entity.DType = SXMLEntity::EType::CharData;
         entity.DNameData = std::string(data, len);
+        implementation->entityCallback(entity);
     }
-
+    void entityCallback(const SXMLEntity &entity) {
+        std::cout << "Entity: " << entity.DNameData << std::endl;
+    }
 };
 
 // Constructor for CXMLReader class
@@ -66,23 +71,22 @@ bool CXMLReader::ReadEntity(SXMLEntity &entity, bool skipcdata) {
     char buffer[1024];
     bool done = false;
     
-    // read until parse end
     while (!done) {
-        std::vector<char> buf;      //temp
-        // read data stored temp
+        std::vector<char> buf;
         if (implementation->source->Read(buf, sizeof(buffer))) {
-            int len = buf.size();   //bytes read
-            done = len == 0;        // no bytes read -> parse end
+            int len = buf.size();
+            done = len == 0;
 
             if (!done) {
-                //expat parsing
                 if (XML_Parse(implementation->parser, buf.data(), len, done) == XML_STATUS_ERROR) {
-                    // failure to parse
                     return false;
                 }
             }
         }
     }
-
+    implementation->parseEnd = done; // Add this line to mark the end of parsing
+    if (skipcdata && entity.DType == SXMLEntity::EType::CharData) {
+        return false;
+    }
     return true;
 }
