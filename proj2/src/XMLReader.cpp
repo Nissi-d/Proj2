@@ -8,6 +8,8 @@ struct CXMLReader::SImplementation {
     std::shared_ptr<CDataSource> source;    // shared ptr to data source
     XML_Parser parser;  //expat parser
     bool parseEnd = false;  // at end of parsing
+    bool EntityReady = false; // Indicates if an entity is ready to be processed
+    SXMLEntity CurrentEntity;
 
     // Constructor: Initialize the parser and set up callbacks
     SImplementation(std::shared_ptr<CDataSource> src): source(src){
@@ -26,17 +28,20 @@ struct CXMLReader::SImplementation {
         SImplementation *implementation = static_cast<SImplementation*>(userData);
         SXMLEntity entity;  // entity for parsed data
         entity.DType = SXMLEntity::EType::StartElement; // set entity type to start element
-        entity.DNameData = name;    
+        entity.DNameData = name;
 
         int attributeCount = 0; //tracker
         while(*attrs){  //add atributes to entity
             std::string attrName = *attrs++;    
             std::string attrValue = *attrs++;
             entity.SetAttribute(attrName, attrValue);   
+            *attrs++;
         }
-        std::cout << "StartElement: " << name << "\nNo of Attributes: " << attributeCount << std::endl;
+        std::cout << "StartElement: " << name << std::endl;    
+        std::cout << "No of Attributes: " << attributeCount << std::endl;
 
-        implementation->entityCallback(entity);
+        implementation->CurrentEntity =entity;
+        implementation->EntityReady = true;
     }
     // end element callback
     static void EndEHand(void *userData, const char *name){
@@ -44,15 +49,22 @@ struct CXMLReader::SImplementation {
         SXMLEntity entity;
         entity.DType = SXMLEntity::EType::EndElement;
         entity.DNameData = name;
-        implementation->entityCallback(entity);
+        std::cout << "EndElement: " << name << std::endl;
+        std::cout << "No of Attributes: 0" << std::endl;
+        implementation->CurrentEntity = entity;
+        implementation->EntityReady = true; 
     }
     // char data calback
     static void CharDataHand(void *userData, const char *data, int len) {                
         SImplementation *implementation = static_cast<SImplementation*>(userData);
-        SXMLEntity entity;
-        entity.DType = SXMLEntity::EType::CharData;
-        entity.DNameData = std::string(data, len);
-        implementation->entityCallback(entity);
+        if (len > 0) {
+            SXMLEntity entity;
+            std::cout << "CharData: " << std::string(data, len) << std::endl;
+            entity.DType = SXMLEntity::EType::CharData;
+            entity.DNameData = std::string(data, len);
+            implementation->CurrentEntity = entity;
+            implementation->EntityReady = true; 
+        }
     }
     void entityCallback(const SXMLEntity &entity) {
         std::cout << "Entity: " << entity.DNameData << std::endl;
@@ -86,15 +98,17 @@ bool CXMLReader::ReadEntity(SXMLEntity &entity, bool skipcdata) {
                 if (XML_Parse(implementation->parser, buf.data(), len, done) == XML_STATUS_ERROR) {
                     return false;
                 }
-                if (done) {
-                    XML_Parse(implementation->parser, "", 0, true); // Signal end of parsing
-                }
             }
+        }
+        else{
+            done = true;
+        }
+        if (implementation->EntityReady) { // Check if an entity is ready
+            entity = implementation->CurrentEntity;
+            implementation->EntityReady = false; // Reset the flag
+            return true;
         }
     }
     implementation->parseEnd = done; // Add this line to mark the end of parsing
-    if (skipcdata && entity.DType == SXMLEntity::EType::CharData) {
-        return false;
-    }
-    return true;
+    return false;
 }
